@@ -30,3 +30,13 @@ Both bugs came from the same root cause: the URL requirement interacts badly wit
 Built templates first to prove the pipeline before adding an API dependency. They work, and they pass validation, but the output is just the source text cut at a character count, so variants end mid-sentence. Templates can cut text, they cannot decide what matters. That is the gap the AI generator fills. Keeping them as a fallback for when the API is down and as deterministic data for tests.
 
 Also worth noting: the validator passed all three of those mid-sentence variants. It checks shape, not sense. No countable rule catches "ends mid-thought".
+
+The AI assistant gave me `gemini-2.0-flash` as the model name. It was retired, and every call came back 404. The useful part is that nothing broke: all three variants fell back to templates and the pipeline kept running, which is exactly what the fallback was built for. I found out my dependency was dead by reading a log line, not by watching the app crash.
+
+Moved the model name into config afterwards so the next deprecation is an env var change, not a code change.
+
+Ran the generator across three different posts and read the output properly instead of just checking it validated. Found three patterns: the same opening phrases repeating across unrelated posts, every closing being a variant of "here is the link", and an emoji on all nine variants.
+
+Added the repeated openings to the banned list, dropped LinkedIn's emoji allowance to zero, and told the prompt that most posts need no emoji at all. The emoji line worked better than expected, all nine came back clean.
+
+Worth noting the validator could not have caught the repetition. It sees one variant at a time, so "every post opens the same way" is invisible to it. That needed a human reading the output.

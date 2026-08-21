@@ -21,6 +21,13 @@ BANNED_PHRASES = [
     "let's face it",
     "the bottom line is",
     "to the next level",
+    "here is a plain breakdown",
+    "here is a simple breakdown",
+    "here is a clear breakdown",
+    "i put together a simple",
+    "i wrote a brief overview",
+    "check out the write-up",
+    "you can read it here",
 ]
 
 
@@ -70,7 +77,7 @@ PROFILES: dict[Platform, ConstraintProfile] = {
         max_hashtags=3,
         min_sentences=3,
         max_sentences=8,
-        max_emoji=1,
+        max_emoji=0,
     ),
 }
 
