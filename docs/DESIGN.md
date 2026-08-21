@@ -46,7 +46,6 @@ The hard part was tone. Code can't check "natural" or "not generic", so I broke 
 | Rule | Value |
 |---|---|
 | `banned_phrases` | list below |
-| `must_end_with_punctuation` | `.` `!` `?` |
 | `max_consecutive_caps_words` | 1 |
 | `must_mention_source` | true — must contain the post URL |
 
@@ -59,6 +58,8 @@ take your ... to the next level
 ```
 
 This list will grow. Better to add phrases when I actually catch the model using them than to guess everything up front.
+
+**Dropped rule:** I originally had a `must_end_with_punctuation` rule requiring text to end with `.` `!` or `?`. Testing killed it. Every variant has to contain a URL, and URLs naturally sit at the end, so the two rules were fighting each other and almost nothing could pass. I tried stripping the URL before checking, but that rejected "Read more at [link]", which is how people actually write. Forcing a full stop in front of a link is exactly the stiff tone I was trying to avoid. The `min_sentences` rule already catches genuinely fragmentary text, so the punctuation check was adding friction without adding value.
 
 ### Per platform
 
