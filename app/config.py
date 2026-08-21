@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./social_studio.db"
     discord_webhook_url: str = ""
+    gemini_model: str = "gemini-3.6-flash"
     gemini_api_key: str = ""
 
 
