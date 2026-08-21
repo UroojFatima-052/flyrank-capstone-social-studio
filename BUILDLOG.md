@@ -21,8 +21,12 @@ The punctuation rule that came out of this phase turned out to be wrong. See Pha
 
 Used an AI assistant for the validator. It got the structure right but had two logic bugs that only showed up when I tested by hand.
 
-First: the punctuation rule required text to end with . ! or ? but every variant must also contain a URL, and URLs go at the end. The two rules were in direct conflict and almost nothing could pass. I dropped the punctuation rule entirely since min_sentences already catches fragments.
+- First: the punctuation rule required text to end with . ! or ? but every variant must also contain a URL, and URLs go at the end. The two rules were in direct conflict and almost nothing could pass. I dropped the punctuation rule entirely since min_sentences already catches fragments.
 
-Second: count_sentences split on . ! ? which meant "https://example.com" got counted as an extra sentence. Every variant with a URL was one sentence over. Fixed by stripping URLs before counting, and added a regression test so it can't come back.
+- Second: count_sentences split on . ! ? which meant "https://example.com" got counted as an extra sentence. Every variant with a URL was one sentence over. Fixed by stripping URLs before counting, and added a regression test so it can't come back.
 
 Both bugs came from the same root cause: the URL requirement interacts badly with text analysis. Worth remembering for anything else that parses variant content.
+
+Built templates first to prove the pipeline before adding an API dependency. They work, and they pass validation, but the output is just the source text cut at a character count, so variants end mid-sentence. Templates can cut text, they cannot decide what matters. That is the gap the AI generator fills. Keeping them as a fallback for when the API is down and as deterministic data for tests.
+
+Also worth noting: the validator passed all three of those mid-sentence variants. It checks shape, not sense. No countable rule catches "ends mid-thought".
