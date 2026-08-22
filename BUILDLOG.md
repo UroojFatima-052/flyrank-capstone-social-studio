@@ -44,3 +44,13 @@ Worth noting the validator could not have caught the repetition. It sees one var
 Called the generate endpoint twice and ended up with duplicate variants. Fixed it by checking which platforms already have a variant and only generating the missing ones, so calling it repeatedly does nothing after the first time. Also added a "skipped" list to the response, because without it a second call returns an empty created list and looks like it failed.
 
 This is the same idea as the idempotency work coming in Phase 4, just applied earlier than planned.
+
+## Phase 3
+
+Put the transition rules in their own file. Four statuses and only certain moves between them, and if that logic sits inside the approve endpoint then the reject endpoint has its own copy and eventually they disagree.
+
+Two more duplicate bugs, both found by double-clicking. Created the same campaign three times before noticing. Then found a variant could hold two pending slots at once. Campaigns got a unique constraint on (post_id, name), slots got a check for an existing pending one.
+
+That is three "create" endpoints in a row that needed a duplicate guard, and I found all three by accident. Going to look for them on purpose in Phase 4.
+
+Fixed the campaign error message too. It said "already exists for this post", which reads like you can only ever have one campaign per post. You can, you just need a different name, and now it says so.
