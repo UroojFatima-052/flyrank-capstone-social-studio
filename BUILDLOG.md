@@ -40,3 +40,7 @@ Ran the generator across three different posts and read the output properly inst
 Added the repeated openings to the banned list, dropped LinkedIn's emoji allowance to zero, and told the prompt that most posts need no emoji at all. The emoji line worked better than expected, all nine came back clean.
 
 Worth noting the validator could not have caught the repetition. It sees one variant at a time, so "every post opens the same way" is invisible to it. That needed a human reading the output.
+
+Called the generate endpoint twice and ended up with duplicate variants. Fixed it by checking which platforms already have a variant and only generating the missing ones, so calling it repeatedly does nothing after the first time. Also added a "skipped" list to the response, because without it a second call returns an empty created list and looks like it failed.
+
+This is the same idea as the idempotency work coming in Phase 4, just applied earlier than planned.

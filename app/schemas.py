@@ -58,4 +58,5 @@ class CampaignDetail(CampaignRead):
 class GenerationReport(BaseModel):
     campaign_id: int
     created: list[VariantRead]
+    skipped: list[str]
     failed: dict[str, list[str]]

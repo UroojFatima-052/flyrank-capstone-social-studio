@@ -44,5 +44,10 @@ def generate_variants(campaign_id: int, session: Session = Depends(get_session))
     if result is None:
         raise HTTPException(status_code=404, detail="Campaign not found.")
 
-    created, failed = result
-    return GenerationReport(campaign_id=campaign_id, created=created, failed=failed)
+    created, skipped, failed = result
+    return GenerationReport(
+        campaign_id=campaign_id,
+        created=created,
+        skipped=skipped,
+        failed=failed,
+    )

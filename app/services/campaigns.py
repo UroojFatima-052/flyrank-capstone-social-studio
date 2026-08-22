@@ -33,7 +33,7 @@ def get_campaign_variants(session: Session, campaign_id: int) -> list[Variant]:
 
 def generate_variants(
     session: Session, campaign_id: int
-) -> tuple[list[Variant], dict[str, list[str]]] | None:
+) -> tuple[list[Variant], list[str], dict[str, list[str]]] | None:
     campaign = session.get(Campaign, campaign_id)
     if campaign is None:
         return None
@@ -42,10 +42,18 @@ def generate_variants(
     if post is None:
         return None
 
+    existing = get_campaign_variants(session, campaign_id)
+    already_have = {v.platform for v in existing}
+
     created: list[Variant] = []
+    skipped: list[str] = []
     failed: dict[str, list[str]] = {}
 
     for platform in Platform:
+        if platform in already_have:
+            skipped.append(platform.value)
+            continue
+
         text, source = generate_with_ai(post, platform)
         result = validate_variant(text, platform)
 
@@ -67,4 +75,4 @@ def generate_variants(
     for variant in created:
         session.refresh(variant)
 
-    return created, failed
+    return created, skipped, failed
