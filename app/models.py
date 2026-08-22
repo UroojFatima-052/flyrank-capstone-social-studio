@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, UniqueConstraint
 
 
 class CampaignStatus(str, Enum):
@@ -48,6 +47,8 @@ class Post(SQLModel, table=True):
 
 
 class Campaign(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("post_id", "name", name="uq_campaign_post_name"),)
+    
     id: int | None = Field(default=None, primary_key=True)
     post_id: int = Field(foreign_key="post.id", index=True)
     name: str

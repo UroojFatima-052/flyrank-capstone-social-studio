@@ -6,10 +6,22 @@ from app.services.ai_generator import generate_with_ai
 from app.services.validator import validate_variant
 
 
-def create_campaign(session: Session, data: CampaignCreate) -> Campaign | None:
+def create_campaign(session: Session, data: CampaignCreate) -> Campaign | str:
     post = session.get(Post, data.post_id)
     if post is None:
-        return None
+        return "Post not found."
+
+    existing = session.exec(
+        select(Campaign)
+        .where(Campaign.post_id == data.post_id)
+        .where(Campaign.name == data.name)
+    ).first()
+    if existing is not None:
+        return (
+            f"A campaign named '{data.name}' already exists for this post "
+            f"(id {existing.id}). Use a different name if you want a second "
+            f"campaign for the same post."
+        )
 
     campaign = Campaign(post_id=data.post_id, name=data.name)
     session.add(campaign)

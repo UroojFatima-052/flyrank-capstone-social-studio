@@ -10,11 +10,11 @@ router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
 @router.post("", response_model=CampaignRead, status_code=status.HTTP_201_CREATED)
 def create_campaign(data: CampaignCreate, session: Session = Depends(get_session)):
-    campaign = campaign_service.create_campaign(session, data)
-    if campaign is None:
-        raise HTTPException(status_code=404, detail="Post not found.")
-    return campaign
-
+    result = campaign_service.create_campaign(session, data)
+    if isinstance(result, str):
+        code = 404 if result == "Post not found." else 409
+        raise HTTPException(status_code=code, detail=result)
+    return result
 
 @router.get("", response_model=list[CampaignRead])
 def list_campaigns(session: Session = Depends(get_session)):
