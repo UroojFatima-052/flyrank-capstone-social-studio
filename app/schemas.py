@@ -1,7 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from app.models import CampaignStatus, Platform, VariantStatus
-
+from app.models import CampaignStatus, Platform, SlotStatus, VariantStatus
 
 class PostCreate(BaseModel):
     title: str | None = Field(default=None)
@@ -60,3 +59,19 @@ class GenerationReport(BaseModel):
     created: list[VariantRead]
     skipped: list[str]
     failed: dict[str, list[str]]
+
+class VariantUpdate(BaseModel):
+    content: str = Field(min_length=1)
+
+class ScheduleCreate(BaseModel):
+    scheduled_for: datetime
+
+
+class ScheduleSlotRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    variant_id: int
+    scheduled_for: datetime
+    status: SlotStatus
+    created_at: datetime
