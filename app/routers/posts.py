@@ -3,13 +3,17 @@ from sqlmodel import Session
 from app.database import get_session
 from app.schemas import PostCreate, PostRead
 from app.services import posts as post_service
+from app.services.fetcher import FetchError
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
 @router.post("", response_model=PostRead, status_code=status.HTTP_201_CREATED)
 def create_post(data: PostCreate, session: Session = Depends(get_session)):
-    return post_service.create_post(session, data)
+    try:
+        return post_service.create_post(session, data)
+    except FetchError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
 
 @router.get("", response_model=list[PostRead])

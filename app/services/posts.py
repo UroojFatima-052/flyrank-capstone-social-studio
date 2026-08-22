@@ -1,12 +1,20 @@
 from sqlmodel import Session, select
 from app.models import Post
 from app.schemas import PostCreate
-
+from app.services.fetcher import FetchError, fetch_page
 
 def create_post(session: Session, data: PostCreate) -> Post:
+    title = data.title
+    content = data.content
+
+    if not content:
+        title, content = fetch_page(data.source_url)
+        if data.title:
+            title = data.title
+
     post = Post(
-        title=data.title,
-        content=data.content,
+        title=title,
+        content=content,
         source_url=data.source_url,
     )
     session.add(post)
