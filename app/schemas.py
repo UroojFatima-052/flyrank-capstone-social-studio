@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from app.models import CampaignStatus, Platform, SlotStatus, VariantStatus
+from app.models import CampaignStatus, Platform, SlotStatus, VariantStatus, AttemptStatus
 
 class PostCreate(BaseModel):
     title: str | None = Field(default=None)
@@ -75,3 +75,16 @@ class ScheduleSlotRead(BaseModel):
     scheduled_for: datetime
     status: SlotStatus
     created_at: datetime
+
+class PublishAttemptRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    variant_id: int
+    slot_id: int
+    idempotency_key: str
+    status: AttemptStatus
+    external_id: str | None
+    message_url: str | None
+    error: str | None
+    attempted_at: datetime
