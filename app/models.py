@@ -85,3 +85,10 @@ class PublishAttempt(SQLModel, table=True):
     message_url: str | None = Field(default=None)
     error: str | None = Field(default=None)
     attempted_at: datetime = Field(default_factory=utcnow)
+
+class MockPost(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    platform: Platform = Field(index=True)
+    content: str
+    idempotency_key: str = Field(index=True)
+    posted_at: datetime = Field(default_factory=utcnow)

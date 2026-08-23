@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     discord_webhook_url: str = ""
     gemini_model: str = "gemini-3.6-flash"
     gemini_api_key: str = ""
+    discord_adapter: str = "discord"
+    x_adapter: str = "mock_x"
+    linkedin_adapter: str = "mock_linkedin"
 
 
 settings = Settings()

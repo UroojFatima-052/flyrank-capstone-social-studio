@@ -54,3 +54,15 @@ Two more duplicate bugs, both found by double-clicking. Created the same campaig
 That is three "create" endpoints in a row that needed a duplicate guard, and I found all three by accident. Going to look for them on purpose in Phase 4.
 
 Fixed the campaign error message too. It said "already exists for this post", which reads like you can only ever have one campaign per post. You can, you just need a different name, and now it says so.
+
+## Phase 4
+
+Built the mocks before Discord. If the interface was wrong I wanted to find out with a class writing to a database, not while debugging a webhook.
+
+The Discord webhook returns 204 with an empty body by default, so there is no message id and no link. Adding wait=true to the query string makes it return the created message instead. Probe 4 needs that link, so one query parameter was the difference between the adapter working and being useless.
+
+Made a deliberate choice that the mock adapters do not deduplicate. Every publish writes a row, even for the same key. That means the MockPost table is a count of how many times the adapter actually ran, which is how I can prove the idempotency guard works rather than just asserting it.
+
+The guard itself is two layers. A select first for the ordinary case, then an IntegrityError catch on the unique constraint for the case where two callers both check, both see nothing, and both insert. The select alone cannot close that gap because there is always a moment between checking and acting. The constraint closes it because the database serialises the inserts.
+
+Nearly recorded Probe 6 as passing when I had only changed the config and seen no Discord message. No publish had actually run, so the silence proved nothing. Reran it properly.
