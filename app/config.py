@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     discord_adapter: str = "discord"
     x_adapter: str = "mock_x"
     linkedin_adapter: str = "mock_linkedin"
+    scheduler_interval_seconds: int = 30
+    scheduler_enabled: bool = True
 
 
 settings = Settings()
