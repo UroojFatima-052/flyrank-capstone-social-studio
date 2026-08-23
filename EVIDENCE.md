@@ -6,22 +6,11 @@ One proof per Definition of Done box, a test name with its output, a log line, o
 
 Nine deterministic tests covering length, hashtags, banned phrases, shouting, missing source URL, and cross-platform profile differences.
 
-```
-$ pytest -v
-collected 9 items
-
-tests/test_validator.py::test_valid_variant_passes PASSED
-tests/test_validator.py::test_variant_too_long_is_blocked PASSED
-tests/test_validator.py::test_variant_too_short_is_blocked PASSED
-tests/test_validator.py::test_variant_too_many_hashtags_is_blocked PASSED
-tests/test_validator.py::test_banned_phrase_is_blocked PASSED
-tests/test_validator.py::test_shouting_is_blocked PASSED
-tests/test_validator.py::test_missing_source_url_is_blocked PASSED
-tests/test_validator.py::test_url_does_not_inflate_sentence_count PASSED
-tests/test_validator.py::test_same_text_passes_x_but_fails_linkedin PASSED
-
-9 passed in 0.64s
-```
+Tests: test_valid_variant_passes, test_variant_too_long_is_blocked,
+test_variant_too_short_is_blocked, test_variant_too_many_hashtags_is_blocked,
+test_banned_phrase_is_blocked, test_shouting_is_blocked,
+test_missing_source_url_is_blocked, test_url_does_not_inflate_sentence_count,
+test_same_text_passes_x_but_fails_linkedin
 
 ## Ingestion
 
@@ -51,29 +40,6 @@ Verified live twice: a retired model name (404) and a free-tier quota limit (429
 Both times all three variants were produced from templates with no crash.
 
 Tests: test_falls_back_to_template_without_api_key
-
-```
-$ pytest -v
-collected 15 items
-
-tests/test_fetcher.py::test_fetch_rejects_unreachable_host PASSED 
-tests/test_generator.py::test_template_generator_produces_different_variants PASSED 
-tests/test_generator.py::test_template_variants_include_source_url PASSED 
-tests/test_generator.py::test_falls_back_to_template_without_api_key PASSED 
-tests/test_generator.py::test_prompt_includes_platform_rules PASSED 
-tests/test_generator.py::test_prompt_includes_previous_errors_on_retry PASSED 
-tests/test_validator.py::test_valid_variant_passes PASSED 
-tests/test_validator.py::test_variant_too_long_is_blocked PASSED 
-tests/test_validator.py::test_variant_too_short_is_blocked PASSED  
-tests/test_validator.py::test_variant_too_many_hashtags_is_blocked PASSED 
-tests/test_validator.py::test_banned_phrase_is_blocked PASSED 
-tests/test_validator.py::test_shouting_is_blocked PASSED 
-tests/test_validator.py::test_missing_source_url_is_blocked PASSED 
-tests/test_validator.py::test_url_does_not_inflate_sentence_count PASSED 
-tests/test_validator.py::test_same_text_passes_x_but_fails_linkedin PASSED 
-
-15 Passed in 1.71s
-```
 
 ## Review workflow
 
@@ -115,9 +81,76 @@ Creating the same campaign name for the same post twice → 409 naming the exist
 and explaining that a different name is allowed. Enforced both in the service and by a
 UNIQUE constraint on (post_id, name).
 
+## Adapter layer
+
+One SocialPublisher interface, one real platform, two mocks. The application depends on the
+interface and never on a platform.
+
+```
+app/adapters/base.py       SocialPublisher protocol and PublishResult
+app/adapters/discord.py    real Discord webhook
+app/adapters/mock.py       MockXPublisher, MockLinkedInPublisher
+app/adapters/registry.py   maps platform to adapter using config
+```
+
+Real Discord publish, the first message the system sent:
+
+```
+PublishResult(success=True,
+              external_id='1541026761477853276',
+              message_url='https://discord.com/channels/@me/1541025855755784205/1541026761477853276',
+              error=None)
+```
+
+## Adapter swap changes destination with no code change
+
+With `DISCORD_ADAPTER=mock_x` in `.env`, a discord variant published through the mock:
+
+```
+first   attempt_id=3 status=success external_id=x-cb80d4028271
+second  attempt_id=3 status=success external_id=x-cb80d4028271
+third   attempt_id=3 status=success external_id=x-cb80d4028271
+```
+
+The external id is a mock id rather than a Discord snowflake, and no message appeared in
+the Discord channel. Only the config value changed.
+
+Tests: test_adapter_swap_changes_the_destination
+
+## Idempotent publish
+
+The key is derived from (variant_id, slot_id) and stored with a UNIQUE constraint. The
+attempt row is written as in_progress before the adapter is called, so the insert itself is
+the gate rather than a check in application code.
+
+Three publishes against slot 2:
+
+```
+first   attempt_id=2 status=success external_id=x-d043a73e1785
+second  attempt_id=2 status=success external_id=x-d043a73e1785
+third   attempt_id=2 status=success external_id=x-d043a73e1785
+```
+
+The mock adapter deliberately does not deduplicate, so the MockPost table counts how many
+times the adapter actually ran:
+
+```
+1 x variant-2-slot-2
+```
+
+One row from three calls. Calls two and three never reached the adapter.
+
+Tests: test_idempotency_key_is_stable, test_publish_succeeds_and_records_an_attempt,
+test_publishing_twice_creates_one_attempt, test_publishing_twice_reaches_the_adapter_once,
+test_successful_publish_marks_variant_published
+
+## Test suite
+
+All tests are deterministic and run offline. No network calls, no API keys required.
+
 ```
 $ pytest -v
-collected 29 items
+collected 35 items
 
 tests/test_fetcher.py::test_fetch_rejects_unreachable_host PASSED
 tests/test_generator.py::test_template_generator_produces_different_variants PASSED
@@ -125,6 +158,12 @@ tests/test_generator.py::test_template_variants_include_source_url PASSED
 tests/test_generator.py::test_falls_back_to_template_without_api_key PASSED
 tests/test_generator.py::test_prompt_includes_platform_rules PASSED
 tests/test_generator.py::test_prompt_includes_previous_errors_on_retry PASSED
+tests/test_publisher.py::test_idempotency_key_is_stable PASSED
+tests/test_publisher.py::test_publish_succeeds_and_records_an_attempt PASSED
+tests/test_publisher.py::test_publishing_twice_creates_one_attempt PASSED
+tests/test_publisher.py::test_publishing_twice_reaches_the_adapter_once PASSED
+tests/test_publisher.py::test_successful_publish_marks_variant_published PASSED
+tests/test_publisher.py::test_adapter_swap_changes_the_destination PASSED
 tests/test_review_workflow.py::test_new_variant_is_draft PASSED
 tests/test_review_workflow.py::test_approve_moves_to_approved PASSED
 tests/test_review_workflow.py::test_cannot_approve_twice PASSED
@@ -149,6 +188,5 @@ tests/test_validator.py::test_missing_source_url_is_blocked PASSED
 tests/test_validator.py::test_url_does_not_inflate_sentence_count PASSED
 tests/test_validator.py::test_same_text_passes_x_but_fails_linkedin PASSED
 
-29 passed in 2.33s                                                                                                       
-
+35 passed in 2.20s
 ```
