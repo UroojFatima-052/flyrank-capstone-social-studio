@@ -66,3 +66,13 @@ Made a deliberate choice that the mock adapters do not deduplicate. Every publis
 The guard itself is two layers. A select first for the ordinary case, then an IntegrityError catch on the unique constraint for the case where two callers both check, both see nothing, and both insert. The select alone cannot close that gap because there is always a moment between checking and acting. The constraint closes it because the database serialises the inserts.
 
 Nearly recorded Probe 6 as passing when I had only changed the config and seen no Discord message. No publish had actually run, so the silence proved nothing. Reran it properly.
+
+## Phase 5
+
+Chose one recurring job over registering a job per slot. The slots table already records what should publish and when, so the scheduler only needs to be a clock. It also means a slot created while the worker is down still gets picked up.
+
+Spent a while failing to crash the worker. Ctrl+C asks uvicorn to shut down gracefully, so it waits for the publish to finish and the attempt ends up marked success. Had to kill the process outright with Stop-Process -Force to produce a real crash. Worth knowing that a graceful stop is not a test of crash recovery.
+
+Interrupted attempts get marked failed, not retried. When the process dies mid publish there is no way to know whether the message went out. Retrying risks a duplicate, marking it failed risks a message that shows as failed but actually sent. The second is visible in history and a person can check it. The first is not undoable.
+
+Also silenced APScheduler's per-run logs. Two lines every thirty seconds saying nothing happened made the real worker output impossible to see.

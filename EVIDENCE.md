@@ -144,14 +144,83 @@ Tests: test_idempotency_key_is_stable, test_publish_succeeds_and_records_an_atte
 test_publishing_twice_creates_one_attempt, test_publishing_twice_reaches_the_adapter_once,
 test_successful_publish_marks_variant_published
 
+## Durable scheduling
+
+APScheduler runs one recurring job every 30 seconds using SQLAlchemyJobStore, so the
+schedule survives a restart. The slots table is the source of truth; the scheduler is
+only the clock.
+
+A slot scheduled for 14:05 UTC published on its own with no manual trigger:
+
+```
+2026-08-23 22:12:15 INFO app.scheduler.worker: Publishing slot 8
+```
+
+The message appeared in the Discord channel at that time. The gap between the scheduled
+time and the publish is the 30 second polling interval.
+
+Tests: test_due_slots_include_past_pending_slots, test_due_slots_exclude_future_slots,
+test_due_slots_exclude_cancelled_slots, test_published_slot_is_no_longer_due
+
+## Crash mid-batch, restart, zero duplicates
+
+The process was killed during a publish with Stop-Process -Force. Ctrl+C does not work
+for this test because uvicorn shuts down gracefully and lets the publish finish.
+
+State immediately after the kill, showing the ambiguous case: the adapter had already
+written its record, but the attempt was never resolved.
+
+```
+attempts:
+  6  variant-11-slot-9  in_progress
+mock posts:
+  4  variant-11-slot-9
+```
+
+On restart:
+
+```
+2026-08-23 22:26:23 WARNING app.scheduler.worker: Attempt 6 for key variant-11-slot-9 was interrupted, marking failed
+2026-08-23 22:26:23 WARNING app.scheduler.runner: Recovered 1 interrupted attempt(s) on startup
+```
+
+State after the worker had been polling for several minutes:
+
+```
+attempts:
+  6  variant-11-slot-9  failed
+mock posts:
+  4  variant-11-slot-9
+```
+
+Still four mock posts. The slot was never republished because the idempotency key
+already exists.
+
+Interrupted attempts are marked failed rather than retried. When a process dies mid
+publish there is no way to know whether the platform received the message, and a false
+failure is something a human can check, while a duplicate post cannot be undone.
+
+Tests: test_recovery_marks_interrupted_attempts_failed,
+test_recovery_does_nothing_when_no_attempts_are_stuck,
+test_interrupted_slot_is_never_republished
+
+## Publish history
+
+Every attempt is recorded with its result, successes and failures together, newest first.
+
+```
+GET /publish-history
+GET /publish-history/{variant_id}
+```
+
 ## Test suite
 
 All tests are deterministic and run offline. No network calls, no API keys required.
 
-```
 $ pytest -v
-collected 35 items
+collected 42 items
 
+```
 tests/test_fetcher.py::test_fetch_rejects_unreachable_host PASSED
 tests/test_generator.py::test_template_generator_produces_different_variants PASSED
 tests/test_generator.py::test_template_variants_include_source_url PASSED
@@ -187,6 +256,13 @@ tests/test_validator.py::test_shouting_is_blocked PASSED
 tests/test_validator.py::test_missing_source_url_is_blocked PASSED
 tests/test_validator.py::test_url_does_not_inflate_sentence_count PASSED
 tests/test_validator.py::test_same_text_passes_x_but_fails_linkedin PASSED
+tests/test_worker.py::test_due_slots_include_past_pending_slots PASSED
+tests/test_worker.py::test_due_slots_exclude_future_slots PASSED
+tests/test_worker.py::test_due_slots_exclude_cancelled_slots PASSED
+tests/test_worker.py::test_published_slot_is_no_longer_due PASSED
+tests/test_worker.py::test_recovery_marks_interrupted_attempts_failed PASSED
+tests/test_worker.py::test_recovery_does_nothing_when_no_attempts_are_stuck PASSED
+tests/test_worker.py::test_interrupted_slot_is_never_republished PASSED
 
-35 passed in 2.20s
+42 passed in 3.69s
 ```
