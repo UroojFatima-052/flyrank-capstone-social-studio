@@ -31,6 +31,10 @@ def publish_slot(session: Session, slot: ScheduleSlot) -> PublishAttempt:
     ).first()
     if existing is not None:
         logger.info("Publish already recorded for key %s, skipping", key)
+        if slot.status == SlotStatus.PENDING:
+            slot.status = SlotStatus.DONE
+            session.add(slot)
+            session.commit()
         return existing
 
     attempt = PublishAttempt(

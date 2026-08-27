@@ -76,3 +76,11 @@ Spent a while failing to crash the worker. Ctrl+C asks uvicorn to shut down grac
 Interrupted attempts get marked failed, not retried. When the process dies mid publish there is no way to know whether the message went out. Retrying risks a duplicate, marking it failed risks a message that shows as failed but actually sent. The second is visible in history and a person can check it. The first is not undoable.
 
 Also silenced APScheduler's per-run logs. Two lines every thirty seconds saying nothing happened made the real worker output impossible to see.
+
+The crash test left slot 9 pending, because the slot is only marked done on a successful publish and the interrupted attempt ended as failed. The worker kept picking it up every thirty seconds, correctly refusing to republish, and logging a failure each time. Nothing was broken and nothing was duplicated, but it would have spun forever. Fixed by closing the slot whenever an attempt for it already exists, whatever the outcome. Only found this by reading the logs the next day.
+
+## Phase 6
+
+The clean machine test was worth doing. My README was still the placeholder from Phase 0, so a reviewer cloning the repo would have had no instructions at all. It also showed me what the app looks like with no keys configured: templates instead of the AI, truncated variants, Discord failing outright. All of that is in the README now, because someone hitting it with no explanation would reasonably think the project was broken.
+
+Wanted to add delete endpoints after getting confused by piled up test records. Decided against it this close to submitting. Deleting a post means deciding what happens to its campaigns, variants and publish attempts, and a published variant should probably not be deletable given the state machine treats published as final. Doing it badly would be worse than not doing it.
