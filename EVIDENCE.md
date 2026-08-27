@@ -266,3 +266,24 @@ tests/test_worker.py::test_interrupted_slot_is_never_republished PASSED
 
 42 passed in 3.69s
 ```
+
+## Probe rehearsal
+
+All six acceptance probes run in one sitting against the current code, using a post
+ingested from a URL rather than pasted text.
+
+1. Ingest, generate variants. Each variant passes its own constraint profile.
+2. Edit a variant to break a rule. Blocked with a clear error, before review.
+3. Schedule an unapproved variant. 409 with the reason.
+4. Approve, schedule, wait. The worker publishes to Discord and the history record
+   carries the link to the live message.
+5. Publish the same slot repeatedly. Same attempt id and same external id every time,
+   one message.
+6. Set DISCORD_ADAPTER=mock_x, restart, publish a discord variant. It goes to the mock
+   and nothing appears in Discord.
+
+One note from the run. Generating variants from a long fetched article failed the
+LinkedIn sentence limit on the first attempt and succeeded on a rerun. The AI is not
+deterministic, so identical input can produce output that passes or fails. Nothing
+invalid was stored, the response named the platform and the reason, and rerunning the
+endpoint filled in the missing variant without touching the two that already existed.
